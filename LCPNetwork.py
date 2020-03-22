@@ -45,15 +45,18 @@ class Connection(object):
 
 
     async def on_message(self, incomingMessage):
-        print("routing")
+        print("routing\n")
         toBeRouted = json.loads(incomingMessage)
         if toBeRouted is None :
             pass
             #how to raise error without stopping functionality
         elif (toBeRouted[0] == "justsaying"):
             await self.manageJustSaying(toBeRouted)
+
         elif (toBeRouted[0] == "request"):
-            print("incoming request ",incomingMessage)
+            print("incoming request ",toBeRouted[1])
+            await self.manageRequests(toBeRouted[1])
+
         elif (toBeRouted[0] == "response"):
             await self.manageResponse(toBeRouted)
             
@@ -74,7 +77,6 @@ class Connection(object):
             self.index_info_recieved_signal.send('index_info',data=message['response'])
 
 
-
     async def manageJustSaying(self, messageFromHub):
         message = messageFromHub[1]
         if (message["subject"] == "hub/challenge"):
@@ -92,8 +94,19 @@ class Connection(object):
         else:
             print(messageFromHub)
 
+
+    async def handleHeartbeat(self, tag):
+        print("sending heartbeat with tag ",tag,"\n")
+        await self.sendResponse("heartbeat",tag)
+
+
+    async def manageRequests(self,messageFromHub):
+        print("this the message from the hub:\n ",messageFromHub)
+        if(messageFromHub["command"]=="heartbeat"):
+            print("heartbeat request received. managing \n")
+            await self.handleHeartbeat(messageFromHub["tag"])
  
- 
+
     async def sendJSmessage(self, content,route):
         message = {"subject":route,"body":content}
         messageArray = ["justsaying",message]
@@ -107,7 +120,20 @@ class Connection(object):
         if(params != None):
             message["params"] = params
 
+        elif(command=="heartbeat"):
+            message["tag"] = params
+
         messageArray = ["request",message]
+        messageStr = json.dumps(messageArray)
+        await self.websocket.send(messageStr)
+
+
+    async def sendResponse(self,command,info):
+        
+        if(command=="heartbeat"):
+            message={"command":"heartbeat"}
+            message["tag"]= info
+        messageArray = ["response",message]
         messageStr = json.dumps(messageArray)
         await self.websocket.send(messageStr)
 
@@ -127,7 +153,7 @@ class Connection(object):
 
         return signatureStr, str(pbKeyb64,"utf-8")
 
-
+    
     async def handleLoginChallenge(self, loginMessage):
         #self.logged_in_status_signal.connect(logged_in_listener)
         await self.sendJSmessage(loginMessage,"hub/login")
@@ -168,6 +194,8 @@ class Connection(object):
         params = {"witnesses":witness_list}
         await self.sendRequest('light/get_parents_and_last_ball_and_witness_list_unit',params)
 
+
+    
 
 
 
