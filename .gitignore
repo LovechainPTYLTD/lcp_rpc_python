@@ -1,3 +1,5 @@
 __pycache__
 moddedLCPNetwork.py
 serverSigner.py
+.DS_Store
+.gitignore
