@@ -10,10 +10,11 @@ import copy
 import logging
 import os
 from blinker import signal
-#handle nonconnection issue
+import sys
+
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 log = logging.getLogger(__name__)
-#from jsonrpcserver import method, async_dispatch as dispatch
+
 """
 light get updates and also heartbeat
 """
@@ -29,12 +30,11 @@ class Connection(object):
         self.header_info_received_signal = signal('header_received')
         self.logged_in_status_signal = signal('logged_in_info')
         self.challenge = None
-        #self.startConnection(uri)
+       
        
 
     async def startConnection(self,uri="ws://hub00.lovecoinplus.com"): #ws://13.59.6.90
-        #async with websockets.connect(uri) as self.websocket:
-            #self.websocket = copy.deepcopy(websocket)
+
             self._connection = websockets.connect(uri)
             self.websocket = await self._connection.__aenter__()
             #self.challenge_received_signal.connect(challenge_listener)
@@ -49,7 +49,7 @@ class Connection(object):
         toBeRouted = json.loads(incomingMessage)
         if toBeRouted is None :
             pass
-            #how to raise error without stopping functionality
+            
         elif (toBeRouted[0] == "justsaying"):
             await self.manageJustSaying(toBeRouted)
 
@@ -139,7 +139,10 @@ class Connection(object):
 
 
     def getSignature(self,challenge):
-        masterKey = keys.generateMasterKey("glory donate cheese direct soda recycle tenant crystal curious dance paper pyramid")
+        if(sys.argv[2]):
+            masterKey = keys.generateMasterKey(sys.argv[1],sys.argv[2])
+        else:
+            masterKey = keys.generateMasterKey(sys.argv[1])
         dKey = masterKey.generateDeviceKey()
         pbKeyBytes = dKey.key.public_key.compressed_bytes
         pbKeyb64 = base64.b64encode(pbKeyBytes)
