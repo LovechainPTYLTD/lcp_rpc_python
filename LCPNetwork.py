@@ -11,6 +11,7 @@ import logging
 import os
 from blinker import signal
 import sys
+import LCPconstants
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 log = logging.getLogger(__name__)
@@ -26,14 +27,14 @@ class Connection(object):
         self.balance_info_received_signal = signal('balance_info_received')
         self.transaction_id_data_received_signal = signal('transaction_id_data_received')
         self.index_info_recieved_signal = signal('index_info_received')
-        self.transaction_history_received_signal = signal('transaction_history_received')
+        self.address_history_received_signal = signal('address_history_received')
         self.header_info_received_signal = signal('header_received')
         self.logged_in_status_signal = signal('logged_in_info')
         self.challenge = None
        
        
 
-    async def startConnection(self,uri="ws://hub00.lovecoinplus.com"): #ws://13.59.6.90
+    async def startConnection(self,uri="ws://bikihub.lovecoinplus.com"): #ws://13.59.6.90
 
             self._connection = websockets.connect(uri)
             self.websocket = await self._connection.__aenter__()
@@ -54,7 +55,7 @@ class Connection(object):
             await self.manageJustSaying(toBeRouted)
 
         elif (toBeRouted[0] == "request"):
-            print("incoming request ",toBeRouted[1])
+            print("incoming request \n",toBeRouted[1])
             await self.manageRequests(toBeRouted[1])
 
         elif (toBeRouted[0] == "response"):
@@ -62,13 +63,14 @@ class Connection(object):
             
     async def manageResponse(self, messageFromHub):
         message = messageFromHub[1]
-        print("this is the message ",message)
+        print("this is the message \n",message)
         if(isinstance(message["response"],list)):
             self.witness_list_received_signal.send('witness_list',data=message["response"])
 
         elif(isinstance(message["response"],dict)):
             if("unstable_mc_joints" in message["response"].keys()):#message["response"]["unstable_mc_joints"]
-                self.transaction_history_received_signal.send("transaction_info",data=message['response']['joints'])
+                print("address_history_received \n",message["response"])
+                self.address_history_received_signal.send("transaction_info",data=message['response']['joints'])
             elif("parent_units" in message['response'].keys()):#message["response"]["parent_units"]
                 self.header_info_received_signal.send('header_info',data=message['response'])
             self.balance_info_received_signal.send('balance_info', data=message['response'])
@@ -124,6 +126,7 @@ class Connection(object):
             message["tag"] = params
 
         messageArray = ["request",message]
+        print("message array \n",messageArray)
         messageStr = json.dumps(messageArray)
         await self.websocket.send(messageStr)
 
@@ -139,10 +142,7 @@ class Connection(object):
 
 
     def getSignature(self,challenge):
-        if(sys.argv[2]):
-            masterKey = keys.generateMasterKey(sys.argv[1],sys.argv[2])
-        else:
-            masterKey = keys.generateMasterKey(sys.argv[1])
+        masterKey = keys.generateMasterKey(LCPconstants.MNEMONIC)
         dKey = masterKey.generateDeviceKey()
         pbKeyBytes = dKey.key.public_key.compressed_bytes
         pbKeyb64 = base64.b64encode(pbKeyBytes)
@@ -179,7 +179,7 @@ class Connection(object):
 
     async def getAddressBalance(self, addresses_list, balance_listener):
         self.balance_info_received_signal.connect(balance_listener)
-        response = await self.sendRequest("light/get_balances",addresses_list)
+        await self.sendRequest("light/get_balances",addresses_list)
 
 
     async def getMainChainIndex(self, index_info_listener):
@@ -187,8 +187,11 @@ class Connection(object):
         await self.sendRequest("get_last_mci")
 
 
-    async def getTransactionHistory(self, transaction_query_params, transaction_history_listener):
-        self.transaction_history_received_signal.connect(transaction_history_listener)
+    async def getAddressHistory(self, addresses, address_history_listener):
+        print("addresses\n",addresses)
+        self.address_history_received_signal.connect(address_history_listener)
+        transaction_query_params = {"addresses":addresses,"witnesses":LCPconstants.WITNESSES,"last_stable_mci":0}
+        print("transaction history params\n ",transaction_query_params)
         await self.sendRequest("light/get_history",transaction_query_params)
         
 

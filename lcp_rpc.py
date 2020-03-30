@@ -102,21 +102,20 @@ async def get_index():
     index = index_info_listener.getData()
     return str(index)+"\n"
 
-@app.route('/get_transaction_history',methods=['POST'])
-async def get_transaction_history():
+@app.route('/get_address_history',methods=['POST'])
+async def get_address_history():
 
     def verify_parameters(transaction_info):
         pass 
-
-    transaction_history_listener = Listener()
-    transaction_query_bytes = await request.get_data()
-    transaction_query_string = transaction_query_bytes.decode("utf-8")
-    transaction_query_dict = json.loads(transaction_query_string)
-    transaction_query_dict["witnesses"] = LCPconstants.WITNESSES
-    await wsConn.getTransactionHistory(transaction_query_dict,transaction_history_listener.setData)
-    await transaction_history_listener.marker.wait()
-    transaction_history = transaction_history_listener.getData()
-    return str(transaction_history) +"\n"
+    #last_stable_mci
+    address_history_listener = Listener()
+    addresses_array = await request.get_data()
+    addresses_array_string = addresses_array.decode("utf-8")
+    addresses_array = json.loads(addresses_array_string)
+    await wsConn.getAddressHistory(addresses_array,address_history_listener.setData)
+    await address_history_listener.marker.wait()
+    address_history = address_history_listener.getData()
+    return str(address_history) +"\n"
 
 
 @app.route('/prepare_transaction_header')
@@ -127,4 +126,5 @@ async def prepare_transaction_header():
     transacion_header = transaction_header_info_listener.getData()
     return str(transacion_header) + "\n"
 
-app.run()
+
+app.run(port=LCPconstants.PORT)
