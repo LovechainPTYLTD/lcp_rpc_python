@@ -55,7 +55,7 @@ curl -d '{
          "authentifiers":{
             "r":"yPSkwrAQB0gZhN7JsYGb18+xaDcTWdnJQTkQTOl0A1U65wEKM+u172iBWJxQq+TDNhiNnzEQ6kea4QUEbt3TmA=="
          },
-         "address":"5PNCW2VHMOSGRQYJW7WQ7JVTX3HY5ZDB"
+         "address":"3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"
       }
    ]
 }' http://localhost:5000/send_transaction
@@ -65,7 +65,7 @@ curl -d '{
 ### /get_balances
 
 ```
-curl -d '["5PNCW2VHMOSGRQYJW7WQ7JVTX3HY5ZDB"]' http://localhost:5000/get_balances
+curl -d '["3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"]' http://localhost:5000/get_balances
 ```
 
 ### /get_transaction_info
@@ -81,7 +81,7 @@ curl -d '0O9uvGcF/sbVnTdfZkbfJcJVuQvVE6aIWk2f7SDZZnA=' http://localhost:5000/get
 ### /get_transaction_history
 
 ```
-curl -d '["5PNCW2VHMOSGRQYJW7WQ7JVTX3HY5ZDB"]' http://localhost:5000/get_transaction_history
+curl -d '["3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"]' http://localhost:5000/get_transaction_history
 ```
 
 ### /prepare_transaction_header
