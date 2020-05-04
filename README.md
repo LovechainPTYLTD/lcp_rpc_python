@@ -21,15 +21,21 @@ python lcp_rpc.py [password]
 
 to send commands use the format:
 
+
 ` [server address]:5000/[command] `
+
 
 example:
 
+
 http://127.0.0.1:5000/get_witnesses
+
 
 ### /get_witnesses
 
+
 ` curl http://localhost:5000/get_witnesses `
+
 
 ### /send_transaction
 
@@ -62,11 +68,20 @@ curl -d '{
 
 ```
 
+post a transaction to the hub
+
+### /get_address_history
+
+curl -d "3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK" http://localhost:5000/get_balances
+
+get the history of transactions for a particular address 
+
 ### /get_balances
 
 ```
 curl -d '["3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"]' http://localhost:5000/get_balances
 ```
+determine the balance of an array of addresses
 
 ### /get_transaction_info
 
@@ -74,9 +89,14 @@ curl -d '["3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"]' http://localhost:5000/get_balance
 curl -d '0O9uvGcF/sbVnTdfZkbfJcJVuQvVE6aIWk2f7SDZZnA=' http://localhost:5000/get_transaction_info
 ```
 
+get information related to a particular transaction and not a particular address
+
+
 ### /get_main_chain_index
 
+
 ` curl http://localhost:5000/get_main_chain_index `
+
 
 ### /get_transaction_history
 
@@ -87,5 +107,13 @@ curl -d '["3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK"]' http://localhost:5000/get_transac
 ### /prepare_transaction_header
 
 ```
-curl http://localhost:5000/prepare_transaction_header
+curl http://localhost:5000/get_header_info
 ```
+
+### /watch_address
+
+```
+curl '3CVF7WEVOTUW5L3FTQOQL4P5J3D6IYOK' http://localhost:5000/prepare_transaction_header
+```
+
+watch an address for changes. the hub will notify the light client.
