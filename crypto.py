@@ -891,6 +891,8 @@ class Signature(object):
 
     def __bytes__(self):
         nbytes = math.ceil(bitcoin_curve.nlen / 8)
+        print("nbytes is\n ",nbytes)
+        
         return self.r.to_bytes(nbytes, 'big') + self.s.to_bytes(nbytes, 'big')
 
 

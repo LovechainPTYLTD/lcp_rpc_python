@@ -7,6 +7,8 @@ from LCPHDkeys import Addresses as walletAddresses
 import json
 import LCPconstants
 
+#check unstable predecessors
+
 class Listener(object):
     
     def __init__(self):
@@ -21,6 +23,7 @@ class Listener(object):
     def getData(self):
         if(self.data):
             return self.data
+
 
 app = Quart(__name__)
 wsConn = Connection()
@@ -63,13 +66,17 @@ async def send_transaction():
     transaction_listener = Listener()
     transaction_bytes = await request.get_data()
     transaction = transaction_bytes.decode("utf-8")
-    print("this is the transaction ", transaction)
-    await wsConn.sendTransaction(transaction, transaction_listener.setData)
+    transactionJSON = json.loads(transaction)
+    print("this is the transaction ", transactionJSON)
+    await wsConn.sendTransaction(transactionJSON, transaction_listener.setData)
     await transaction_listener.marker.wait()
     transaction_info = transaction_listener.getData()
     return str(transaction_info) +"\n"
 
 
+"""
+curl --data '["Q2HRDTJNFOW6EVD65YYAAICDQRPLONJO"]' http://localhost:[PORT]/get_address_history
+"""
 @app.route('/get_balances',methods=['POST'])
 async def get_balances():
     balance_listener = Listener()
@@ -102,6 +109,7 @@ async def get_index():
     index = index_info_listener.getData()
     return str(index)+"\n"
 
+
 @app.route('/get_address_history',methods=['POST'])
 async def get_address_history():
 
@@ -118,13 +126,24 @@ async def get_address_history():
     return str(address_history) +"\n"
 
 
-@app.route('/prepare_transaction_header')
+@app.route('/get_header_info')
 async def prepare_transaction_header():
     transaction_header_info_listener = Listener()
     await wsConn.prepareTransactionHeader(LCPconstants.WITNESSES,transaction_header_info_listener.setData)
     await transaction_header_info_listener.marker.wait()
     transacion_header = transaction_header_info_listener.getData()
     return str(transacion_header) + "\n"
+
+
+@app.route('/watch_address')
+async def watch_address():
+    watch_address_listener = Listener()
+    address_bytes = await request.get_data()
+    address_string = address_bytes.decode("utf-8")
+    await wsConn.watchAddress(address_string, watch_address_listener.setData)
+    await watch_address_listener.marker.wait()
+    watch_address_feedback = watch_address_listener.getData()
+    return str(watch_address_feedback)+"\n"
 
 
 app.run(port=LCPconstants.PORT)

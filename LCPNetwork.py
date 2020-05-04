@@ -12,7 +12,7 @@ import os
 from blinker import signal
 import sys
 import LCPconstants
-
+#forward errors
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 log = logging.getLogger(__name__)
 
@@ -30,19 +30,19 @@ class Connection(object):
         self.address_history_received_signal = signal('address_history_received')
         self.header_info_received_signal = signal('header_received')
         self.logged_in_status_signal = signal('logged_in_info')
+        self.watch_address_feedback_signal = signal('watched_address_feedback')
         self.challenge = None
        
        
-
     async def startConnection(self,uri="ws://bikihub.lovecoinplus.com"): #ws://13.59.6.90
 
-            self._connection = websockets.connect(uri)
-            self.websocket = await self._connection.__aenter__()
-            #self.challenge_received_signal.connect(challenge_listener)
-            if(self.websocket): 
-                while True:
-                    message = await self.websocket.recv()
-                    await self.on_message(message)
+        self._connection = websockets.connect(uri)
+        self.websocket = await self._connection.__aenter__()
+        #self.challenge_received_signal.connect(challenge_listener)
+        if(self.websocket): 
+            while True:
+                message = await self.websocket.recv()
+                await self.on_message(message)
 
 
     async def on_message(self, incomingMessage):
@@ -61,6 +61,7 @@ class Connection(object):
         elif (toBeRouted[0] == "response"):
             await self.manageResponse(toBeRouted)
             
+
     async def manageResponse(self, messageFromHub):
         message = messageFromHub[1]
         print("this is the message \n",message)
@@ -68,11 +69,17 @@ class Connection(object):
             self.witness_list_received_signal.send('witness_list',data=message["response"])
 
         elif(isinstance(message["response"],dict)):
-            if("unstable_mc_joints" in message["response"].keys()):#message["response"]["unstable_mc_joints"]
+            responseObjectKeys = message["response"].keys()
+            if("unstable_mc_joints" in responseObjectKeys):#message["response"]["unstable_mc_joints"]
                 print("address_history_received \n",message["response"])
                 self.address_history_received_signal.send("transaction_info",data=message['response']['joints'])
-            elif("parent_units" in message['response'].keys()):#message["response"]["parent_units"]
+            elif("parent_units" in responseObjectKeys):#message["response"]["parent_units"]
                 self.header_info_received_signal.send('header_info',data=message['response'])
+            elif("error" in responseObjectKeys):
+                #self.transaction_status_received_signal.send('transaction_error',data=message['response'])
+                print(message['response'])
+            elif("accepted" in responseObjectKeys):
+                self.transaction_status_received_signal.send('transaction accepted',data=message['response'])
             self.balance_info_received_signal.send('balance_info', data=message['response'])
 
         elif(isinstance(message["response"],int)):
@@ -109,7 +116,7 @@ class Connection(object):
             await self.handleHeartbeat(messageFromHub["tag"])
  
 
-    async def sendJSmessage(self, content,route):
+    async def sendJSmessage(self,route,content):
         message = {"subject":route,"body":content}
         messageArray = ["justsaying",message]
         messageStr = json.dumps(messageArray)
@@ -141,11 +148,21 @@ class Connection(object):
         await self.websocket.send(messageStr)
 
 
+    async def sendTransaction(self, transaction,transaction_status_listener):
+        self.transaction_status_received_signal.connect(transaction_status_listener)
+        unitObject = {"unit":transaction}
+        #print("transaction to send")
+        response = await self.sendRequest("post_joint", unitObject)
+
+
     def getSignature(self,challenge):
-        masterKey = keys.generateMasterKey(LCPconstants.MNEMONIC)
-        dKey = masterKey.generateDeviceKey()
+        masterKey = keys.generateMasterKey(LCPconstants.MNEMONIC,password="")
+        dKey = masterKey.generateWalletKey()
         pbKeyBytes = dKey.key.public_key.compressed_bytes
+        ba = pbKeyBytes.hex()
+        print("pub key bytes in hex\n",ba)
         pbKeyb64 = base64.b64encode(pbKeyBytes)
+        print("public key base64\n",pbKeyb64)
         challengeObject = {"challenge":challenge,"pubkey":str(pbKeyb64,"utf-8")}
         challengeObjectStr = addresses._stringUtil(challengeObject)
         challengeBytes = bytearray(challengeObjectStr,"utf-8")
@@ -159,18 +176,13 @@ class Connection(object):
     
     async def handleLoginChallenge(self, loginMessage):
         #self.logged_in_status_signal.connect(logged_in_listener)
-        await self.sendJSmessage(loginMessage,"hub/login")
+        await self.sendJSmessage("hub/login",loginMessage)
 
 
     async def getWitnesses(self,witness_list_listener):
         self.witness_list_received_signal.connect(witness_list_listener)
         await self.sendRequest("get_witnesses")
     
-        
-    async def sendTransaction(self, transaction,transaction_status_listener):
-        self.transaction_status_received_signal.connect(transaction_status_listener)
-        response = await self.sendRequest("post_joint", transaction)
-
 
     async def getTransactionIdInfo(self,transaction_id, transaction_id_info_listener):
         self.transaction_id_data_received_signal.connect(transaction_id_info_listener)
@@ -201,6 +213,9 @@ class Connection(object):
         await self.sendRequest('light/get_parents_and_last_ball_and_witness_list_unit',params)
 
 
+    async def watchAddress(self, address_string, watched_address_listener):
+        self.watch_address_feedback_signal.connect(watched_address_listener)
+        await self.sendJSmessage('light/new_address_to_watch',address_string)
     
 
 
